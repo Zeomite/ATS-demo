@@ -1,20 +1,15 @@
 {
   "version": 2,
-  "functions": {
-    "api": {
-      "handler": "server.py",
-      "runtime": "python3.8"
-    }
-  },
   "builds": [
-    { "src": "server.py", "use": "@vercel/python" }
+    { 
+      "src": "server.py", 
+      "use": "@vercel/python",
+      "config": {
+        "buildCommand": "pip install -r requirements.txt"
+      }
+    }
   ],
   "routes": [
     { "src": "/(.*)", "dest": "server.py" }
-  ],
-  "build": {
-    "commands": [
-      { "use": "@vercel/python", "command": "pip install -r requirements.txt" }
-    ]
-  }
+  ]
 }
