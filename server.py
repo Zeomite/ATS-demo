@@ -24,8 +24,7 @@ def upload_files():
         extracted_data.append({'Name': name[0] if name else None, 'Email': email, 'Phone': phone})
     
     df = pd.DataFrame(extracted_data)
-    
-    # Save DataFrame to Excel file
+ 
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     df.to_excel(writer, index=False)
