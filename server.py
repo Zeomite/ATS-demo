@@ -1,14 +1,10 @@
-from flask import Flask, request, render_template, send_file
-import os
-import re
-import xlwt
-import phonenumbers
+from flask import Flask, request, render_template
 import textract
+import re
+import pandas as pd
+from io import BytesIO
 
 app = Flask(__name__)
-
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def extract_emails_and_numbers(text):
     phone_numbers=[]
@@ -17,40 +13,26 @@ def extract_emails_and_numbers(text):
     emails = re.findall(r"\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b", text)
     return emails, phone_numbers
 
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        files = request.files.getlist('files[]')
-        extracted_data = []
-        for file in files:
-            filename = file.filename
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            """if filename.endswith('.pdf'):
-                text = extract_text_from_pdf(file_path)
-            elif filename.endswith('.docx'):
-                text = extract_text_from_docx(file_path)
-            elif filename.endswith('.doc'):
-               """
-            text= textract.process(file_path)
-            emails, phone_numbers = extract_emails_and_numbers(text)
-            extracted_data.append({'filename': filename, 'emails': emails, 'phone_numbers': phone_numbers})
-        xls_filename = 'extracted_data.xls'
-        workbook = xlwt.Workbook()
-        sheet = workbook.add_sheet('Data')
-        sheet.write(0, 0, 'Filename')
-        sheet.write(0, 1, 'Emails')
-        sheet.write(0, 2, 'Phone Numbers')
-        row = 1
-        for data in extracted_data:
-            sheet.write(row, 0, data['filename'])
-            sheet.write(row, 1, ', '.join(data['emails']))
-            sheet.write(row, 2, ', '.join(data['phone_numbers']))
-            row += 1
-        xls_filepath = os.path.join(app.config['UPLOAD_FOLDER'], xls_filename)
-        workbook.save(xls_filepath)
-        return send_file(xls_filepath, as_attachment=True)
-    return render_template('upload.html')
+@app.route('/upload', methods=['POST'])
+def upload_files():
+    uploaded_files = request.files.getlist("file[]")
+    extracted_data = []
+    for file in uploaded_files:
+        text = textract.process(file)
+        name = re.findall(r'\b[A-Z][a-z]+ [A-Z][a-z]+\b', text.decode())
+        email,phone = extract_emails_and_numbers(text)
+        extracted_data.append({'Name': name[0] if name else None, 'Email': email, 'Phone': phone})
+    
+    df = pd.DataFrame(extracted_data)
+    
+    # Save DataFrame to Excel file
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, index=False)
+    writer.save()
+    output.seek(0)
+    
+    return send_file(output, attachment_filename='resumes_data.xls', as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
