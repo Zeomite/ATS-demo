@@ -13,8 +13,10 @@ def extract_emails_and_numbers(text):
     emails = re.findall(r"\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b", text)
     return emails, phone_numbers
 
-@app.route('/upload', methods=['POST'])
+@app.route('/',  methods=['GET', 'POST'])
 def upload_files():
+    if request.method == 'GET':
+        return render_template('upload.html')
     uploaded_files = request.files.getlist("file[]")
     extracted_data = []
     for file in uploaded_files:
